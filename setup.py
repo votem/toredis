@@ -31,10 +31,10 @@ setup(
     description='Really simple async Redis client for Tornado',
     author='Josh Marshall',
     author_email='catchjosh@gmail.com',
-    url = "http://github.com/joshmarshall/toredis/",
-    license = "http://www.apache.org/licenses/LICENSE-2.0",
-    packages=['toredis',],
+    url="http://github.com/joshmarshall/toredis/",
+    license="http://www.apache.org/licenses/LICENSE-2.0",
+    packages=['toredis'],
     package_data={'toredis': ['commands.json']},
-    install_requires=['tornado',],
+    install_requires=['tornado'],
     **kwargs
 )

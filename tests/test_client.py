@@ -3,12 +3,14 @@ import redis
 import time
 from toredis.client import Client
 
+
 class TestClient(AsyncTestCase):
     """ Test the client """
 
     def test_connect(self):
         client = Client(ioloop=self.io_loop)
         result = {}
+
         def callback():
             result["connected"] = True
             self.stop()
@@ -20,6 +22,7 @@ class TestClient(AsyncTestCase):
     def test_set_command(self):
         client = Client(ioloop=self.io_loop)
         result = {}
+
         def set_callback(response):
             result["set"] = response
             self.stop()
@@ -38,10 +41,10 @@ class TestClient(AsyncTestCase):
         with self.assertRaises(Exception):
             client.set("foo", "bar1")
 
-
     def test_get_command(self):
         client = Client(ioloop=self.io_loop)
         result = {}
+
         def get_callback(response):
             result["get"] = response
             self.stop()
@@ -83,6 +86,7 @@ class TestClient(AsyncTestCase):
     def test_pub_command(self):
         client = Client(ioloop=self.io_loop)
         result = {}
+
         def pub_callback(response):
             result["pub"] = response
             self.stop()
@@ -91,7 +95,7 @@ class TestClient(AsyncTestCase):
         self.wait()
         # blocks
         self.assertTrue("pub" in result)
-        self.assertEqual(result["pub"], 0) # no subscribers yet
+        self.assertEqual(result["pub"], 0)  # no subscribers yet
 
     def test_disconnect(self):
         client = Client(ioloop=self.io_loop)
@@ -99,4 +103,3 @@ class TestClient(AsyncTestCase):
         client.disconnect()
         with self.assertRaises(IOError):
             client._stream.read_bytes(1024, lambda x: x)
-
