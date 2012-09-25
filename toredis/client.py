@@ -30,7 +30,7 @@ def get_command_handler(command, response_handler):
             messages.append(arg)
 
         messages.append("")
-        message = "\r\n".join(messages)
+        message = "\r\n".join(messages).encode('utf-8')
 
         self.send_message(message, response_handler, callback)
 

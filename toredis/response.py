@@ -1,6 +1,10 @@
 """ The specific response class(es) for Redis commands. """
 
 
+def d(s):
+    return s.decode('utf-8')
+
+
 class Response(object):
     """ Handles all the parsing of a response """
 
@@ -11,36 +15,36 @@ class Response(object):
 
     def handle_response(self, identifier):
         """ Extract a message and do what is necessary. """
-        method = RESPONSE_MAP[identifier]
+        method = RESPONSE_MAP[d(identifier)]
         getattr(self, method)()
 
     def handle_status(self):
         """ Handle a single line status message. """
         def read_callback(data):
             """ Read status callback """
-            self.callback(data[:-2])
-        self.stream.read_until("\r\n", callback=read_callback)
+            self.callback(d(data[:-2]))
+        self.stream.read_until(b"\r\n", callback=read_callback)
 
     def handle_error(self):
         """ Handle a single line error. """
         def read_callback(data):
             """ Read the error message """
             raise Exception(data)
-        self.stream.read_until("\r\n", callback=read_callback)
+        self.stream.read_until(b"\r\n", callback=read_callback)
 
     def handle_integer(self):
         """ Handle an integer response """
         def read_callback(data):
             """ Read the integer response """
             self.callback(int(data))
-        self.stream.read_until("\r\n", callback=read_callback)
+        self.stream.read_until(b"\r\n", callback=read_callback)
 
     def handle_bulk(self):
         """ Handle a bulk response """
 
         def read_response(data):
             """ Return bulk response """
-            self.callback(data[:-2])  # stripping CLRF
+            self.callback(d(data[:-2]))  # stripping CLRF
 
         def read_length(data):
             """ Read the length of a bulk response """
@@ -48,7 +52,7 @@ class Response(object):
             # including trailing CLRF
             self.stream.read_bytes(length + 2, read_response)
 
-        self.stream.read_until("\r\n", read_length)
+        self.stream.read_until(b"\r\n", read_length)
 
     def handle_multi_bulk(self):
         """ Handle a multi-bulk response (lists, etc.) """
@@ -70,7 +74,7 @@ class Response(object):
             data["num_parts"] = int(num_parts)
             self.stream.read_bytes(1, self.handle_response)
 
-        self.stream.read_until("\r\n", read_results)
+        self.stream.read_until(b"\r\n", read_results)
 
 
 class SubscribeResponse(Response):

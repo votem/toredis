@@ -30,7 +30,7 @@ class TestClient(AsyncTestCase):
         self.assertTrue("set" in result)
         self.assertEqual(result["set"], "OK")
         conn = redis.Redis()
-        self.assertEqual(conn["foo"], "bar")
+        self.assertEqual(conn["foo"].decode('utf-8'), "bar")
 
     def test_set_no_callback(self):
         client = Client(ioloop=self.io_loop)
