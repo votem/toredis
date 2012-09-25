@@ -15,6 +15,16 @@ limitations under the License.
 
 from distutils.core import setup
 
+import sys
+
+major, minor = sys.version_info[:2]
+
+kwargs = {}
+
+if major >= 3:
+    import setuptools  # setuptools is required for use_2to3
+    kwargs["use_2to3"] = True
+
 setup(
     name='toredis',
     version='0.1.1',
@@ -24,5 +34,7 @@ setup(
     url = "http://github.com/joshmarshall/toredis/",
     license = "http://www.apache.org/licenses/LICENSE-2.0",
     packages=['toredis',],
-    install_requires=['tornado',]
+    package_data={'toredis': ['commands.json']},
+    install_requires=['tornado',],
+    **kwargs
 )

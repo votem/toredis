@@ -1,5 +1,6 @@
 """ The specific response class(es) for Redis commands. """
 
+
 class Response(object):
     """ Handles all the parsing of a response """
 
@@ -39,20 +40,20 @@ class Response(object):
 
         def read_response(data):
             """ Return bulk response """
-            self.callback(data[:-2]) # stripping CLRF
+            self.callback(data[:-2])  # stripping CLRF
 
         def read_length(data):
             """ Read the length of a bulk response """
             length = int(data)
             # including trailing CLRF
-            self.stream.read_bytes(length+2, read_response)
+            self.stream.read_bytes(length + 2, read_response)
 
         self.stream.read_until("\r\n", read_length)
 
     def handle_multi_bulk(self):
         """ Handle a multi-bulk response (lists, etc.) """
         results = []
-        data = {"num_parts": 1} # hack hack hack...
+        data = {"num_parts": 1}  # hack hack hack...
         original_callback = self.callback
 
         def handle_part(part_response):
@@ -70,6 +71,7 @@ class Response(object):
             self.stream.read_bytes(1, self.handle_response)
 
         self.stream.read_until("\r\n", read_results)
+
 
 class SubscribeResponse(Response):
     """ Handles the long-running subscription connections """
@@ -101,4 +103,3 @@ RESPONSE_MAP = {
     "$": "handle_bulk",
     "*": "handle_multi_bulk"
 }
-
