@@ -7,21 +7,10 @@ from tornado.iostream import IOStream
 from tornado.ioloop import IOLoop
 from tornado import stack_context
 
-from toredis.gen_commands import compile_commands
+from toredis.commands import RedisCommands
 
 
-class redis_metaclass(type):
-
-    def __new__(self, cls_name, cls_parents, cls_attrs):
-        new_cls_attrs = compile_commands()
-        assert set(new_cls_attrs) & set(cls_attrs) == set()
-        new_cls_attrs.update(cls_attrs)
-        return type.__new__(self, cls_name, cls_parents, new_cls_attrs)
-
-
-class Connection(object):
-
-    __metaclass__ = redis_metaclass
+class Connection(RedisCommands):
 
     def __init__(self, redis, on_connect=None):
 
@@ -132,9 +121,7 @@ class Connection(object):
             self.lock()
 
 
-class Redis(object):
-
-    __metaclass__ = redis_metaclass
+class Redis(RedisCommands):
 
     def __init__(self, host="localhost", port=6379, unixsocket=None,
                  ioloop=None):
