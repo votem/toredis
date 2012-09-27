@@ -7,10 +7,10 @@ from tornado.iostream import IOStream
 from tornado.ioloop import IOLoop
 from tornado import stack_context
 
-from toredis.commands import RedisCommands
+from toredis.commands import RedisCommandsMixin
 
 
-class Connection(RedisCommands):
+class Connection(RedisCommandsMixin):
 
     def __init__(self, redis, on_connect=None):
 
@@ -121,7 +121,7 @@ class Connection(RedisCommands):
             self.lock()
 
 
-class Redis(RedisCommands):
+class Redis(RedisCommandsMixin):
 
     def __init__(self, host="localhost", port=6379, unixsocket=None,
                  ioloop=None):

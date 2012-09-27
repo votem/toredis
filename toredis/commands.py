@@ -1,4 +1,4 @@
-class RedisCommands(object):
+class RedisCommandsMixin(object):
 
     def append(self, key, value, callback=None):
         """
