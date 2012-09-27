@@ -139,8 +139,18 @@ def parse_arguments(command, arguments):
     return args, doc, code
 
 
+name_map = {
+    'del': 'delete',
+    'exec': 'execute'
+}
+
+
 def get_command_name(command):
-    return command.lower().replace(' ', '_')
+    name = command.lower().replace(' ', '_')
+    if name in name_map:
+        return name_map[name]
+    else:
+        return name
 
 
 def get_command_code(func_name, cmd, params):
@@ -190,15 +200,11 @@ def compile_commands():
     ret = {}
     for cmd, params in sorted(get_commands().items()):
         name = get_command_name(cmd)
-        if name in ('exec', 'del'):
-            name = '_%s' % name
         lines = get_command_code(name, cmd, params)
         code = compile('\n'.join(lines), "<string>", "exec")
         ctx = {}
         exec code in ctx
         ret[name] = ctx[name]
-        if name[0] == '_':
-            ret[name].func_name = name[1:].encode('ascii')
     return ret
 
 

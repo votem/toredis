@@ -201,7 +201,7 @@ class RedisCommands(object):
         args.append(decrement)
         self.send_message(args, callback)
 
-    def del(self, keys, callback=None):
+    def delete(self, keys, callback=None):
         """
         Delete a key
 
@@ -276,7 +276,7 @@ class RedisCommands(object):
         args.extend(args)
         self.send_message(args, callback)
 
-    def exec(self, callback=None):
+    def execute(self, callback=None):
         """
         Execute all commands issued after MULTI
         """
