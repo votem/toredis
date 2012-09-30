@@ -45,9 +45,9 @@ class Connection(RedisCommandsMixin):
         self.reader.feed(data)
         resp = self.reader.gets()
         while resp != False:
-            self.redis.ioloop.add_callback(
-                partial(self.callbacks.popleft(), resp)
-            )
+            callback = self.callbacks.popleft()
+            if callback is not None:
+                self.redis.ioloop.add_callback(partial(callback, resp))
             resp = self.reader.gets()
 
     def is_idle(self):
@@ -85,7 +85,9 @@ class Connection(RedisCommandsMixin):
                 )
 
         self.stream.write(self.format_message(args))
-        self.callbacks.append(stack_context.wrap(callback))
+        if callback is not None:
+            callback = stack_context.wrap(callback)
+        self.callbacks.append(None)
 
     def format_message(self, args):
         l = "*%d" % len(args)
