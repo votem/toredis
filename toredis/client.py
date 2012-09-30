@@ -1,7 +1,7 @@
 """Async Redis client for Tornado"""
 
 from collections import deque
-from functools import partial, wraps
+from functools import partial
 import logging
 import socket
 
@@ -33,21 +33,6 @@ class Connection(RedisCommandsMixin):
 
         self.reader = hiredis.Reader()
 
-        # all incoming (p)message events are passed to all that callbacks
-        self.msg_callbacks = list()
-
-        # incoming (p)subscribe/(p)unsubscribe events are passed to
-        # corresponding callback once
-        self.sub_callbacks = dict()
-        self.psub_callbacks = dict()
-
-        # used in unlock and to detect empty-response (P)UNSUBSCRIBE
-        self.channels = set()
-        self.patterns = list()
-
-        # to detect pub/sub status
-        self.subscriptions = 0
-
         self.callbacks = deque()
 
     def _on_connect(self):
@@ -60,29 +45,10 @@ class Connection(RedisCommandsMixin):
         self.reader.feed(data)
         resp = self.reader.gets()
         while resp != False:
-            if self.subscriptions:
-                self._on_message(*resp)
-            else:
-                self.redis.ioloop.add_callback(
-                    partial(self.callbacks.popleft(), resp)
-                )
-            resp = self.reader.gets()
-
-    def _on_message(self, group, source, message):
-        if group in ('subscribe', 'unsubscribe', 'psubscribe', 'punsubscribe'):
-            self.subscriptions = message
-        for callback in self.msg_callbacks:
             self.redis.ioloop.add_callback(
-                partial(callback, group, source, message)
+                partial(self.callbacks.popleft(), resp)
             )
-
-    def _unsubscribe_callback(self, callback):
-        @wraps(callback)
-        def wrapper(pong):
-            if pong != 'PONG':
-                raise Exception('Problems with (P)UNSUBSCRIBE command!')
-            callback([])
-        return wrapper
+            resp = self.reader.gets()
 
     def is_idle(self):
         return len(self.callbacks) == 0
@@ -101,49 +67,22 @@ class Connection(RedisCommandsMixin):
             assert resp == 'OK'
             self.redis._shared.add(self)
 
-        if self.channels or self.patterns:
-
-            if self.channels:
-                self.send_message(['UNSUBSCRIBE'])
-
-            if self.patterns:
-                self.send_message(['PUNSUBSCRIBE'])
-
         self.send_message(['SELECT', self.redis._database], cb)
-
-    def add_pubsub_callback(self, callback):
-        if callback not in self.msb_callbacks:
-            self.msb_callbacks.append(callback)
-
-    def remove_pubsub_callback(self, callback):
-        self.msb_callbacks.remove(callback)
 
     def send_message(self, args, callback=None):
 
         command = args[0]
 
+        if 'SUBSCRIBE' in command:
+            raise NotImplementedError('Not yet.')
+
         # Do not allow the commands, affecting the execution of other commands,
         # to be used on shared connection.
-        if command in ('SUBSCRIBE', 'PSUBSCRIBE', 'WATCH', 'MULTI', 'SELECT'):
+        if command in ('WATCH', 'MULTI', 'SELECT'):
             if self.is_shared():
                 raise Exception(
                     'Command is not allowed while connection is shared!'
                 )
-            if command == 'SUBSCRIBE':
-                self.channels.update(args[1:])
-            elif command == 'PSUBSCRIBE':
-                self.patterns.extend(args[1:])
-
-        # (P)UNSUBSCRIBE commands without arguments don't produce any output
-        # from redis when connection is not in pubsub mode. So, we have to add a
-        # PING command after them and wrap callback to catch its output. This
-        # allows to maintain the callback/response queue in the right order.
-        # FIXME: are there any other such commands?
-        if len(args) == 1 and command == 'UNSUBSCRIBE' and not self.channels:
-            logger.warning('UNSUBSCRIBE: not subscribed to any channels!')
-
-        if len(args) == 1 and command == 'PUNSUBSCRIBE' and not self.patterns:
-            logger.warning('PUNSUBSCRIBE: not subscribed to any patterns!')
 
         self.stream.write(self.format_message(args))
         self.callbacks.append(stack_context.wrap(callback))
