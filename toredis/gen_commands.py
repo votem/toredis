@@ -118,7 +118,10 @@ def parse_arguments(command, arguments):
                 args.append('%s=[]' % name)
             else:
                 args.append(name)
-            code.append('args.extend(%s)' % name)
+            code.append('if isinstance(%s, basestring):' % name)
+            code.append('    args.append(%s)' % name)
+            code.append('else:')
+            code.append('    args.extend(%s)' % name)
         elif 'enum' in arg and len(arg['enum']) == 1 and arg.get('optional'):
             name = argname(arg['name'])
             args.append('%s=False' % name)
