@@ -47,7 +47,7 @@ class Connection(RedisCommandsMixin):
     def _on_read(self, data):
         self.reader.feed(data)
         resp = self.reader.gets()
-        while resp != False:
+        while resp is not False:
             callback = self.callbacks.popleft()
             if callback is not None:
                 self.redis._ioloop.add_callback(partial(callback, resp))
