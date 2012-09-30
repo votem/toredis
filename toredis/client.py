@@ -33,6 +33,9 @@ class Connection(RedisCommandsMixin):
 
         self.reader = hiredis.Reader()
 
+        self.watch = set()
+        self.multi = False
+
         self.callbacks = deque()
 
     def _on_connect(self):
@@ -67,6 +70,11 @@ class Connection(RedisCommandsMixin):
             assert resp == 'OK'
             self.redis._shared.add(self)
 
+        if self.multi:
+            self.send_message(['DISCARD'])
+        elif self.watch:
+            self.send_message(['UNWATCH'])
+
         self.send_message(['SELECT', self.redis._database], cb)
 
     def send_message(self, args, callback=None):
@@ -80,9 +88,18 @@ class Connection(RedisCommandsMixin):
         # to be used on shared connection.
         if command in ('WATCH', 'MULTI', 'SELECT'):
             if self.is_shared():
-                raise Exception(
-                    'Command is not allowed while connection is shared!'
-                )
+                raise Exception('Command %s is not allowed while connection '
+                                'is shared!' % command)
+            if command == 'WATCH':
+                self.watch.add(args[1])
+            if command == 'MULTI':
+                self.multi = True
+
+        # monitor transaction state, to unlock correctly
+        if command in ('EXEC', 'DISCARD', 'UNWATCH'):
+            if command in ('EXEC', 'DISCARD'):
+                self.multi = False
+            self.watch.clear()
 
         self.stream.write(self.format_message(args))
         if callback is not None:
