@@ -50,7 +50,7 @@ class Connection(RedisCommandsMixin):
         while resp != False:
             callback = self.callbacks.popleft()
             if callback is not None:
-                self.redis.ioloop.add_callback(partial(callback, resp))
+                self.redis._ioloop.add_callback(partial(callback, resp))
             resp = self.reader.gets()
 
     def is_idle(self):

@@ -28,13 +28,13 @@ class RedisCommandsMixin(object):
         """
         Asynchronously rewrite the append-only file
         """
-        self.send_message([], callback)
+        self.send_message(["BGREWRITEAOF"], callback)
 
     def bgsave(self, callback=None):
         """
         Asynchronously save the dataset to disk
         """
-        self.send_message([], callback)
+        self.send_message(["BGSAVE"], callback)
 
     def bitcount(self, key, start=None, end=None, callback=None):
         """
@@ -127,7 +127,7 @@ class RedisCommandsMixin(object):
         ----------
         O(N) where N is the number of client connections
         """
-        self.send_message([], callback)
+        self.send_message(["CLIENT LIST"], callback)
 
     def config_get(self, parameter, callback=None):
         """
@@ -145,7 +145,7 @@ class RedisCommandsMixin(object):
         ----------
         O(1)
         """
-        self.send_message([], callback)
+        self.send_message(["CONFIG RESETSTAT"], callback)
 
     def config_set(self, parameter, value, callback=None):
         """
@@ -160,7 +160,7 @@ class RedisCommandsMixin(object):
         """
         Return the number of keys in the selected database
         """
-        self.send_message([], callback)
+        self.send_message(["DBSIZE"], callback)
 
     def debug_object(self, key, callback=None):
         """
@@ -174,7 +174,7 @@ class RedisCommandsMixin(object):
         """
         Make the server crash
         """
-        self.send_message([], callback)
+        self.send_message(["DEBUG SEGFAULT"], callback)
 
     def decr(self, key, callback=None):
         """
@@ -221,7 +221,7 @@ class RedisCommandsMixin(object):
         """
         Discard all commands issued after MULTI
         """
-        self.send_message([], callback)
+        self.send_message(["DISCARD"], callback)
 
     def dump(self, key, callback=None):
         """
@@ -280,7 +280,7 @@ class RedisCommandsMixin(object):
         """
         Execute all commands issued after MULTI
         """
-        self.send_message([], callback)
+        self.send_message(["EXEC"], callback)
 
     def exists(self, key, callback=None):
         """
@@ -324,13 +324,13 @@ class RedisCommandsMixin(object):
         """
         Remove all keys from all databases
         """
-        self.send_message([], callback)
+        self.send_message(["FLUSHALL"], callback)
 
     def flushdb(self, callback=None):
         """
         Remove all keys from the current database
         """
-        self.send_message([], callback)
+        self.send_message(["FLUSHDB"], callback)
 
     def get(self, key, callback=None):
         """
@@ -600,7 +600,7 @@ class RedisCommandsMixin(object):
         """
         Get information and statistics about the server
         """
-        self.send_message([], callback)
+        self.send_message(["INFO"], callback)
 
     def keys(self, pattern, callback=None):
         """
@@ -620,7 +620,7 @@ class RedisCommandsMixin(object):
         """
         Get the UNIX time stamp of the last successful save to disk
         """
-        self.send_message([], callback)
+        self.send_message(["LASTSAVE"], callback)
 
     def lindex(self, key, index, callback=None):
         """
@@ -798,7 +798,7 @@ class RedisCommandsMixin(object):
         """
         Listen for all requests received by the server in real time
         """
-        self.send_message([], callback)
+        self.send_message(["MONITOR"], callback)
 
     def move(self, key, db, callback=None):
         """
@@ -845,7 +845,7 @@ class RedisCommandsMixin(object):
         """
         Mark the start of a transaction block
         """
-        self.send_message([], callback)
+        self.send_message(["MULTI"], callback)
 
     def object(self, subcommand, argumentss=[], callback=None):
         """
@@ -903,7 +903,7 @@ class RedisCommandsMixin(object):
         """
         Ping the server
         """
-        self.send_message([], callback)
+        self.send_message(["PING"], callback)
 
     def psetex(self, key, milliseconds, value, callback=None):
         """
@@ -978,7 +978,7 @@ class RedisCommandsMixin(object):
         """
         Close the connection
         """
-        self.send_message([], callback)
+        self.send_message(["QUIT"], callback)
 
     def randomkey(self, callback=None):
         """
@@ -988,7 +988,7 @@ class RedisCommandsMixin(object):
         ----------
         O(1)
         """
-        self.send_message([], callback)
+        self.send_message(["RANDOMKEY"], callback)
 
     def rename(self, key, newkey, callback=None):
         """
@@ -1105,7 +1105,7 @@ class RedisCommandsMixin(object):
         """
         Synchronously save the dataset to disk
         """
-        self.send_message([], callback)
+        self.send_message(["SAVE"], callback)
 
     def scard(self, key, callback=None):
         """
@@ -1140,7 +1140,7 @@ class RedisCommandsMixin(object):
         ----------
         O(N) with N being the number of scripts in cache
         """
-        self.send_message([], callback)
+        self.send_message(["SCRIPT FLUSH"], callback)
 
     def script_kill(self, callback=None):
         """
@@ -1150,7 +1150,7 @@ class RedisCommandsMixin(object):
         ----------
         O(1)
         """
-        self.send_message([], callback)
+        self.send_message(["SCRIPT KILL"], callback)
 
     def script_load(self, script, callback=None):
         """
@@ -1487,7 +1487,7 @@ class RedisCommandsMixin(object):
         """
         Internal command used for replication
         """
-        self.send_message([], callback)
+        self.send_message(["SYNC"], callback)
 
     def time(self, callback=None):
         """
@@ -1497,7 +1497,7 @@ class RedisCommandsMixin(object):
         ----------
         O(1)
         """
-        self.send_message([], callback)
+        self.send_message(["TIME"], callback)
 
     def ttl(self, key, callback=None):
         """
@@ -1543,7 +1543,7 @@ class RedisCommandsMixin(object):
         ----------
         O(1)
         """
-        self.send_message([], callback)
+        self.send_message(["UNWATCH"], callback)
 
     def watch(self, keys, callback=None):
         """

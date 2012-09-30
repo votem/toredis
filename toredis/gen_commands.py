@@ -135,7 +135,7 @@ def parse_arguments(command, arguments):
     if len(code) > 1:
         code.append('self.send_message(args, callback)')
     else:
-        code = ['self.send_message([], callback)']
+        code = ['self.send_message(["%s"], callback)' % command]
     return args, doc, code
 
 
