@@ -1,13 +1,20 @@
 """Async Redis client for Tornado"""
 
 from collections import deque
+from functools import partial, wraps
+import logging
 import socket
+
+import hiredis
 
 from tornado.iostream import IOStream
 from tornado.ioloop import IOLoop
 from tornado import stack_context
 
 from toredis.commands import RedisCommandsMixin
+
+
+logger = logging.getLogger(__name__)
 
 
 class Connection(RedisCommandsMixin):
@@ -18,33 +25,128 @@ class Connection(RedisCommandsMixin):
         self._on_connect = on_connect
 
         sock = socket.socket(redis._family, socket.SOCK_STREAM, 0)
-        self.stream = IOStream(sock, io_loop=redis._ioloop)
-        self.stream.set_close_callback(self.on_close)
-        self.stream.connect(redis._addr, self.on_connect)
+        stream = IOStream(sock, io_loop=redis._ioloop)
+        self.stream = stream
+        stream.set_close_callback(self._on_close)
+        stream.read_until_close(self.on_close, self._on_read)
+        stream.connect(redis._addr, self._on_connect)
 
-        self.pub_callbacks = list()
+        self.reader = hiredis.Reader()
+
+        # all incoming (p)message events are passed to all that callbacks
+        self.msg_callbacks = list()
+
+        # incoming (p)subscribe/(p)unsubscribe events are passed to
+        # corresponding callback once
+        self.sub_callbacks = dict()
+        self.psub_callbacks = dict()
+
+        # used in unlock and to detect empty-response (P)UNSUBSCRIBE
         self.channels = set()
-        self.patterns = set()
+        self.patterns = list()
+
+        # to detect pub/sub status
+        self.subscriptions = 0
 
         self.callbacks = deque()
 
-    def on_connect(self):
+    def _on_connect(self):
         self.redis._shared.append(self)
         if self._on_connect:
             self._on_connect(self)
             self._on_connect = None
 
-    def _clear_pubsub(self):
+    def _on_read(self, data):
+        self.reader.feed(data)
+        resp = self.reader.gets()
+        while resp != False:
+            if self.subscriptions:
+                self._on_message(*resp)
+            else:
+                self.redis.ioloop.add_callback(
+                    partial(self.callbacks.popleft(), resp)
+                )
+            resp = self.reader.gets()
 
-        self.pub_callbacks = list()
+    def _on_message(self, group, source, message):
+        if group in ('subscribe', 'unsubscribe', 'psubscribe', 'punsubscribe'):
+            self.subscriptions = message
+        for callback in self.msg_callbacks:
+            self.redis.ioloop.add_callback(
+                partial(callback, group, source, message)
+            )
 
-        if self.channels:
-            self.send_message(['UNSUBSCRIBE'])
-            self.channels = set()
+    def _unsubscribe_callback(self, callback):
+        @wraps(callback)
+        def wrapper(pong):
+            if pong != 'PONG':
+                raise Exception('Problems with (P)UNSUBSCRIBE command!')
+            callback([])
+        return wrapper
 
-        if self.patterns:
-            self.send_message(['PUNSUBSCRIBE'])
-            self.patterns = set()
+    def is_idle(self):
+        return len(self.callbacks) == 0
+
+    def is_shared(self):
+        return self in self.redis._shared
+
+    def lock(self):
+        if not self.is_shared():
+            raise Exception('Connection already is locked!')
+        self.redis._shared.remove(self)
+
+    def unlock(self, callback=None):
+
+        def cb(resp):
+            assert resp == 'OK'
+            self.redis._shared.add(self)
+
+        if self.channels or self.patterns:
+
+            if self.channels:
+                self.send_message(['UNSUBSCRIBE'])
+
+            if self.patterns:
+                self.send_message(['PUNSUBSCRIBE'])
+
+        self.send_message(['SELECT', self.redis._database], cb)
+
+    def add_pubsub_callback(self, callback):
+        if callback not in self.msb_callbacks:
+            self.msb_callbacks.append(callback)
+
+    def remove_pubsub_callback(self, callback):
+        self.msb_callbacks.remove(callback)
+
+    def send_message(self, args, callback=None):
+
+        command = args[0]
+
+        # Do not allow the commands, affecting the execution of other commands,
+        # to be used on shared connection.
+        if command in ('SUBSCRIBE', 'PSUBSCRIBE', 'WATCH', 'MULTI', 'SELECT'):
+            if self.is_shared():
+                raise Exception(
+                    'Command is not allowed while connection is shared!'
+                )
+            if command == 'SUBSCRIBE':
+                self.channels.update(args[1:])
+            elif command == 'PSUBSCRIBE':
+                self.patterns.extend(args[1:])
+
+        # (P)UNSUBSCRIBE commands without arguments don't produce any output
+        # from redis when connection is not in pubsub mode. So, we have to add a
+        # PING command after them and wrap callback to catch its output. This
+        # allows to maintain the callback/response queue in the right order.
+        # FIXME: are there any other such commands?
+        if len(args) == 1 and command == 'UNSUBSCRIBE' and not self.channels:
+            logger.warning('UNSUBSCRIBE: not subscribed to any channels!')
+
+        if len(args) == 1 and command == 'PUNSUBSCRIBE' and not self.patterns:
+            logger.warning('PUNSUBSCRIBE: not subscribed to any patterns!')
+
+        self.stream.write(self.format_message(args))
+        self.callbacks.append(stack_context.wrap(callback))
 
     def format_message(self, args):
         l = "*%d" % len(args)
@@ -57,66 +159,12 @@ class Connection(RedisCommandsMixin):
         lines.append(b"")
         return b"\r\n".join(lines)
 
-    def is_idle(self):
-        return len(self.callbacks) == 0
-
-    def add_publish_callback(self, callback):
-        # XXX: if callback not in self.pub_callbacks: ?
-        self.pub_callbacks.append(callback)
-
-    def is_shared(self):
-        return self in self.redis._shared
-
-    def lock(self):
-        if not self.is_shared():
-            raise Exception('Connection already is locked!')
-        self.redis._shared.remove(self)
-
-    def unlock(self):
-        self._clear_pubsub()
-        self.redis._shared.add(self)
-
-    def send_message(self, args, callback=None):
-
-        command = args[0]
-
-        # some stuff to monitor the state of connection
-        if command in ('SUBSCRIBE', 'PSUBSCRIBE', 'WATCH', 'MULTI'):
-
-            if self.is_shared():
-                raise Exception(
-                    'Command is not allowed while connection is shared!'
-                )
-
-            if command == 'SUBSCRIBE':
-                self.channels.update(args[1:])
-
-            elif command == 'PSUBSCRIBE':
-                self.patterns.update(args[1:])
-
-        self.stream.write(self.format_message(args))
-
-        # (P)UNSUBSCRIBE commands don't produce output from redis.
-        # So, we have to do not add callbacks for them to maintain the
-        # callbacks in right order.
-        # FIXME: are there any other such commands?
-        if command not in ('UNSUBSCRIBE', 'PUNSUBSCRIBE'):
-
-            @stack_context.wrap
-            def process_response(response):
-                self.process_response(response, callback)
-
-            self.callbacks.append(process_response)
-
-    def process_response(self, response, callback):
-        raise NotImplementedError()
-
     def close(self):
         self.send_command(['QUIT'])
         if self.is_shared():
             self.lock()
 
-    def on_close(self):
+    def _on_close(self):
         if self.is_shared():
             self.lock()
 
@@ -124,7 +172,7 @@ class Connection(RedisCommandsMixin):
 class Redis(RedisCommandsMixin):
 
     def __init__(self, host="localhost", port=6379, unixsocket=None,
-                 ioloop=None):
+                 database=0, ioloop=None):
         """
         Create Redis manager instance.
 
@@ -141,6 +189,8 @@ class Redis(RedisCommandsMixin):
         else:
             self._family = socket.AF_UNIX
             self._addr = unixsocket
+
+        self._database = database
 
         self._shared = deque()
 
