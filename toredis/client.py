@@ -68,7 +68,7 @@ class Connection(RedisCommandsMixin):
 
         def cb(resp):
             assert resp == 'OK'
-            self.redis._shared.add(self)
+            self.redis._shared.append(self)
 
         if self._multi:
             self.send_message(['DISCARD'])
@@ -110,6 +110,8 @@ class Connection(RedisCommandsMixin):
         l = "*%d" % len(args)
         lines = [l.encode('utf-8')]
         for arg in args:
+            if not isinstance(arg, basestring):
+                arg = str(arg)
             arg = arg.encode('utf-8')
             l = "$%d" % len(arg)
             lines.append(l.encode('utf-8'))
