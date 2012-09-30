@@ -22,27 +22,27 @@ class Connection(RedisCommandsMixin):
     def __init__(self, redis, on_connect=None):
 
         self.redis = redis
-        self._on_connect = on_connect
+        self._on_connect_callback = on_connect
 
         sock = socket.socket(redis._family, socket.SOCK_STREAM, 0)
         stream = IOStream(sock, io_loop=redis._ioloop)
         self.stream = stream
         stream.set_close_callback(self._on_close)
-        stream.read_until_close(self.on_close, self._on_read)
+        stream.read_until_close(self._on_close, self._on_read)
         stream.connect(redis._addr, self._on_connect)
 
         self.reader = hiredis.Reader()
 
-        self.watch = set()
-        self.multi = False
+        self._watch = set()
+        self._multi = False
 
         self.callbacks = deque()
 
     def _on_connect(self):
         self.redis._shared.append(self)
-        if self._on_connect:
-            self._on_connect(self)
-            self._on_connect = None
+        if self._on_connect_callback is not None:
+            self._on_connect_callback(self)
+            self._on_connect_callback = None
 
     def _on_read(self, data):
         self.reader.feed(data)
@@ -70,9 +70,9 @@ class Connection(RedisCommandsMixin):
             assert resp == 'OK'
             self.redis._shared.add(self)
 
-        if self.multi:
+        if self._multi:
             self.send_message(['DISCARD'])
-        elif self.watch:
+        elif self._watch:
             self.send_message(['UNWATCH'])
 
         self.send_message(['SELECT', self.redis._database], cb)
@@ -91,15 +91,15 @@ class Connection(RedisCommandsMixin):
                 raise Exception('Command %s is not allowed while connection '
                                 'is shared!' % command)
             if command == 'WATCH':
-                self.watch.add(args[1])
+                self._watch.add(args[1])
             if command == 'MULTI':
-                self.multi = True
+                self._multi = True
 
         # monitor transaction state, to unlock correctly
         if command in ('EXEC', 'DISCARD', 'UNWATCH'):
             if command in ('EXEC', 'DISCARD'):
-                self.multi = False
-            self.watch.clear()
+                self._multi = False
+            self._watch.clear()
 
         self.stream.write(self.format_message(args))
         if callback is not None:
@@ -122,7 +122,9 @@ class Connection(RedisCommandsMixin):
         if self.is_shared():
             self.lock()
 
-    def _on_close(self):
+    def _on_close(self, data=None):
+        if data is not None:
+            self._on_read(data)
         if self.is_shared():
             self.lock()
 
