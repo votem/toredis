@@ -104,7 +104,7 @@ class Connection(RedisCommandsMixin):
         self.stream.write(self.format_message(args))
         if callback is not None:
             callback = stack_context.wrap(callback)
-        self.callbacks.append(None)
+        self.callbacks.append(callback)
 
     def format_message(self, args):
         l = "*%d" % len(args)
@@ -159,6 +159,7 @@ class Redis(RedisCommandsMixin):
             self._shared.rotate()
             callback(self._shared[-1])
         else:
+            callback = stack_context.wrap(callback)
             with stack_context.NullContext():
                 Connection(self, callback)
 
