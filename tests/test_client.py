@@ -59,12 +59,9 @@ class TestClient(AsyncTestCase):
         conn = redis.Redis()
 
         def sub_callback(response):
-            print 'SUB', response
-
             if response[0] == "subscribe":
                 result["sub"] = response
                 conn.publish("foobar", "new message!")
-                print 'published'
             elif response[0] == "message":
                 result["message_count"] += 1
                 if result["message_count"] < 100:
@@ -94,6 +91,24 @@ class TestClient(AsyncTestCase):
         # blocks
         self.assertTrue("pub" in result)
         self.assertEqual(result["pub"], 0)  # no subscribers yet
+
+    def test_blpop(self):
+        client = Client(io_loop=self.io_loop)
+        result = {}
+
+        def rpush_callback(response):
+            result["push"] = response
+
+            def blpop_callback(response):
+                result["pop"] = response
+                self.stop()
+
+            client.blpop("test", 0, blpop_callback)
+
+        client.connect()
+        client.rpush("test", "dummy", rpush_callback)
+        self.wait()
+        self.assertEqual(result["pop"], ["test", "dummy"])
 
     def test_disconnect(self):
         client = Client(io_loop=self.io_loop)
