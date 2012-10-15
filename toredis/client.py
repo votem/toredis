@@ -114,6 +114,17 @@ class Client(RedisCommandsMixin):
         if data is not None:
             self._on_read(data)
 
+        # Trigger any pending callbacks
+        callbacks = self.callbacks
+        self.callbacks = deque()
+
+        if callbacks:
+            for cb in callbacks:
+                try:
+                    cb(None)
+                except:
+                    logger.exception('Exception in callback')
+
         # Trigger on_disconnect
         if self._on_disconnect_callback is not None:
             self._on_disconnect_callback(self)
