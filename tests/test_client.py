@@ -64,6 +64,7 @@ class TestClient(AsyncTestCase):
             if response[0] == "subscribe":
                 result["sub"] = response
                 conn.publish("foobar", "new message!")
+                print 'published'
             elif response[0] == "message":
                 result["message_count"] += 1
                 if result["message_count"] < 100:
