@@ -13,17 +13,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from distutils.core import setup
-
-import sys
-
-major, minor = sys.version_info[:2]
-
-kwargs = {}
-
-if major >= 3:
-    import setuptools  # setuptools is required for use_2to3
-    kwargs["use_2to3"] = True
+try:
+    from setuptools import setup, find_packages
+except ImportError:
+    from distribute_setup import use_setuptools
+    use_setuptools()
+    from setuptools import setup, find_packages
 
 setup(
     name='toredis',
@@ -31,10 +26,8 @@ setup(
     description='Really simple async Redis client for Tornado',
     author='Josh Marshall',
     author_email='catchjosh@gmail.com',
-    url="http://github.com/joshmarshall/toredis/",
+    url="http://github.com/mrjoes/toredis/",
     license="http://www.apache.org/licenses/LICENSE-2.0",
     packages=['toredis'],
-    package_data={'toredis': ['commands.json']},
-    install_requires=['tornado'],
-    **kwargs
+    install_requires=['tornado', 'hiredis'],
 )

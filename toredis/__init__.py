@@ -1,3 +1,1 @@
-""" Just a holder for shortcuts """
-
-from toredis.client import Redis
+from toredis.client import Client

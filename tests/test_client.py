@@ -8,7 +8,7 @@ class TestClient(AsyncTestCase):
     """ Test the client """
 
     def test_connect(self):
-        client = Client(ioloop=self.io_loop)
+        client = Client(io_loop=self.io_loop)
         result = {}
 
         def callback():
@@ -20,12 +20,13 @@ class TestClient(AsyncTestCase):
         self.assertTrue("connected" in result)
 
     def test_set_command(self):
-        client = Client(ioloop=self.io_loop)
+        client = Client(io_loop=self.io_loop)
         result = {}
 
         def set_callback(response):
             result["set"] = response
             self.stop()
+
         client.connect()
         client.set("foo", "bar", callback=set_callback)
         self.wait()
@@ -35,14 +36,8 @@ class TestClient(AsyncTestCase):
         conn = redis.Redis()
         self.assertEqual(conn["foo"].decode('utf-8'), "bar")
 
-    def test_set_no_callback(self):
-        client = Client(ioloop=self.io_loop)
-        client.connect()
-        with self.assertRaises(Exception):
-            client.set("foo", "bar1")
-
     def test_get_command(self):
-        client = Client(ioloop=self.io_loop)
+        client = Client(io_loop=self.io_loop)
         result = {}
 
         def get_callback(response):
@@ -59,11 +54,13 @@ class TestClient(AsyncTestCase):
         self.assertEqual(result["get"], time_string)
 
     def test_sub_command(self):
-        client = Client(ioloop=self.io_loop)
+        client = Client(io_loop=self.io_loop)
         result = {"message_count": 0}
         conn = redis.Redis()
 
         def sub_callback(response):
+            print 'SUB', response
+
             if response[0] == "subscribe":
                 result["sub"] = response
                 conn.publish("foobar", "new message!")
@@ -84,7 +81,7 @@ class TestClient(AsyncTestCase):
         self.assertTrue(result["message"], "new message 99!")
 
     def test_pub_command(self):
-        client = Client(ioloop=self.io_loop)
+        client = Client(io_loop=self.io_loop)
         result = {}
 
         def pub_callback(response):
@@ -98,8 +95,8 @@ class TestClient(AsyncTestCase):
         self.assertEqual(result["pub"], 0)  # no subscribers yet
 
     def test_disconnect(self):
-        client = Client(ioloop=self.io_loop)
+        client = Client(io_loop=self.io_loop)
         client.connect()
-        client.disconnect()
+        client.close()
         with self.assertRaises(IOError):
             client._stream.read_bytes(1024, lambda x: x)
