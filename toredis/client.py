@@ -1,9 +1,7 @@
-"""Async Redis client for Tornado"""
-
-from collections import deque
-from functools import partial
 import logging
 import socket
+
+from collections import deque
 
 import hiredis
 
@@ -18,87 +16,45 @@ logger = logging.getLogger(__name__)
 
 
 class Connection(RedisCommandsMixin):
-    def __init__(self, io_loop, on_connect=None):
+    def __init__(self, addr, on_connect=None, on_disconnect=None, io_loop=None):
+        self._io_loop = io_loop or IOLoop.instance()
         self._on_connect_callback = on_connect
+        self._on_disconnect_callback = on_disconnect
 
         # TODO: Configurable family
-        sock = socket.socket(sock.AF_INET, socket.SOCK_STREAM, 0)
-        stream = IOStream(sock, io_loop=redis._ioloop)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
+        stream = IOStream(sock, io_loop=self._io_loop)
         self.stream = stream
-        stream.set_close_callback(self._on_close)
-        stream.read_until_close(self._on_close, self._on_read)
-        stream.connect(redis._addr, self._on_connect)
+
+        stream.read_until_close(self.on_close, self._on_read)
+        stream.connect(addr, self._on_connect)
 
         self.reader = hiredis.Reader()
-
-        self._watch = set()
-        self._multi = False
-
         self.callbacks = deque()
 
     def _on_connect(self):
-        self.redis._shared.append(self)
         if self._on_connect_callback is not None:
             self._on_connect_callback(self)
-            self._on_connect_callback = None
 
     def _on_read(self, data):
         self.reader.feed(data)
+
         resp = self.reader.gets()
+
         while resp is not False:
             callback = self.callbacks.popleft()
             if callback is not None:
-                self.redis._ioloop.add_callback(partial(callback, resp))
+                try:
+                    callback(resp)
+                except:
+                    logger.exception('Callback failed')
+
             resp = self.reader.gets()
 
     def is_idle(self):
         return len(self.callbacks) == 0
 
-    def is_shared(self):
-        return self in self.redis._shared
-
-    def lock(self):
-        if not self.is_shared():
-            raise Exception('Connection already is locked!')
-        self.redis._shared.remove(self)
-
-    def unlock(self, callback=None):
-
-        def cb(resp):
-            assert resp == 'OK'
-            self.redis._shared.append(self)
-
-        if self._multi:
-            self.send_message(['DISCARD'])
-        elif self._watch:
-            self.send_message(['UNWATCH'])
-
-        self.send_message(['SELECT', self.redis._database], cb)
-
     def send_message(self, args, callback=None):
-
-        command = args[0]
-
-        if 'SUBSCRIBE' in command:
-            raise NotImplementedError('Not yet.')
-
-        # Do not allow the commands, affecting the execution of other commands,
-        # to be used on shared connection.
-        if command in ('WATCH', 'MULTI', 'SELECT'):
-            if self.is_shared():
-                raise Exception('Command %s is not allowed while connection '
-                                'is shared!' % command)
-            if command == 'WATCH':
-                self._watch.add(args[1])
-            if command == 'MULTI':
-                self._multi = True
-
-        # monitor transaction state, to unlock correctly
-        if command in ('EXEC', 'DISCARD', 'UNWATCH'):
-            if command in ('EXEC', 'DISCARD'):
-                self._multi = False
-            self._watch.clear()
-
         self.stream.write(self.format_message(args))
         if callback is not None:
             callback = stack_context.wrap(callback)
@@ -119,70 +75,12 @@ class Connection(RedisCommandsMixin):
 
     def close(self):
         self.send_command(['QUIT'])
-        if self.is_shared():
-            self.lock()
+        self.stream.close()
 
     def _on_close(self, data=None):
         if data is not None:
             self._on_read(data)
-        if self.is_shared():
-            self.lock()
 
-
-class Redis(RedisCommandsMixin):
-    def __init__(self, host="localhost", port=6379, unixsocket=None,
-                 database=0, ioloop=None):
-        """
-        Create Redis manager instance.
-
-        It allows to execute Redis commands using flexible connection pool.
-        Use get_locked_connection() method to get connections, which are able to
-        execute transactions and (p)subscribe commands.
-        """
-
-        self._ioloop = ioloop or IOLoop.instance()
-
-        if unixsocket is None:
-            self._family = socket.AF_INET
-            self._addr = (host, port)
-        else:
-            self._family = socket.AF_UNIX
-            self._addr = unixsocket
-
-        self._database = database
-
-        self._shared = deque()
-
-    def _get_connection(self, callback):
-        if self._shared:
-            self._shared.rotate()
-            callback(self._shared[-1])
-        else:
-            callback = stack_context.wrap(callback)
-            with stack_context.NullContext():
-                Connection(self, callback)
-
-    def send_message(self, args, callback):
-        """
-        Send a message to Redis server.
-
-        args: a list of message arguments including command
-        callback: a function to which the result would be passed
-        """
-        def cb(conn):
-            conn.send_message(args, callback)
-        self._get_connection(cb)
-
-    def get_locked_connection(self, callback):
-        """
-        Get connection suitable to execute transactions and (p)subscribe
-        commands.
-
-        Locks a connection from shared pool and passes it to callback. If
-        there are no connections in shared pool, then a new one would be
-        created.
-        """
-        def cb(conn):
-            conn.lock()
-            callback(conn)
-        self._get_connection(cb)
+        # Trigger on_disconnect
+        if self._on_disconnect_callback is not None:
+            self._on_disconnect_callback(self)
