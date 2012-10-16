@@ -1,0 +1,19 @@
+Source: python-toredis
+Section: python
+Priority: optional
+Maintainer: Serge S. Koval <serge.koval@gmail.com>
+Build-Depends: debhelper (>= 7), python (>= 2.7)
+Standards-Version: 3.9.2
+Homepage: http://github.com/mrjoes/toredis
+
+Package: python-toredis
+Architecture: all
+Depends: ${misc:Depends}, ${python:Depends}
+Description: Persistent key-value database with network interface (Python library)
+ Redis is a key-value database in a similar vein to memcache but the dataset
+ is non-volatile. Redis additionally provides native support for atomically
+ manipulating and querying data structures such as lists and sets.
+ .
+ The dataset is stored entirely in memory and periodically flushed to disk.
+ .
+ This package contains Python bindings to Tornado and Redis.
