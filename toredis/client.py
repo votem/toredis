@@ -34,10 +34,13 @@ class Client(RedisCommandsMixin):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
         self._stream = IOStream(sock, io_loop=self._io_loop)
         self._stream.read_until_close(self._on_close, self._on_read)
-        self._stream.connect((host, port), callback)
+        self._stream.connect((host, port), callback=callback)
 
     def is_idle(self):
         return len(self.callbacks) == 0
+
+    def is_connected(self):
+        return bool(self._stream) or not self._stream.closed()
 
     def send_message(self, args, callback=None):
         # Special case for pub-sub
