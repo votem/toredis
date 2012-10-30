@@ -40,7 +40,7 @@ class Client(RedisCommandsMixin):
         return len(self.callbacks) == 0
 
     def is_connected(self):
-        return bool(self._stream) or not self._stream.closed()
+        return bool(self._stream) and not self._stream.closed()
 
     def send_message(self, args, callback=None):
         # Special case for pub-sub
