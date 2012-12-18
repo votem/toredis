@@ -34,5 +34,6 @@ Key design points:
 You can find command `documentation here <https://github.com/mrjoes/toredis/blob/master/toredis/commands.py>`_ (will be moved to rtd later).
 
 Things missing:
+
 * Backport pure-python redis protocol parser (for PyPy support)
 * Connection pools
