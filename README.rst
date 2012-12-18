@@ -18,16 +18,12 @@ Key design points:
 
 2. Most redis commands accept one or more keys. Toredis adds a bit of logic to handle single key or array of keys. Due to python
    limitations, it is not possible to use `args` with named argument.
-
-  So, this will work:
-
+   So, this will work::
 
     conn.blpop('test', callback=callback)
     conn.blpop(['test', 'test2'], callback=callback)
 
-
-  And this won't:
-
+   And this won't::
 
     conn.blpop('test', 'test2', callback=callback)
 
