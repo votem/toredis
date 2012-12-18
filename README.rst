@@ -29,7 +29,7 @@ Key design points:
 
 3. If redis connection will be dropped while waiting for response, callback will be triggered with `None` as a value.
 
-4. Toredis does not provide reconnection feature, but you can override :meth:`~toredis.Client.on_disconnect` method in :class:`~toredis.Client` class.
+4. Toredis does not provide reconnection feature, but you can override :meth:`~toredis.Client.on_disconnect` method and implement your reconnection logic.
 
 You can find command `documentation here <https://github.com/mrjoes/toredis/blob/master/toredis/commands.py>`_ (will be moved to rtd later).
 
