@@ -16,9 +16,17 @@ logger = logging.getLogger(__name__)
 
 
 class Client(RedisCommandsMixin):
-    def __init__(self, on_disconnect=None, io_loop=None):
+    """
+        Redis client class
+    """
+    def __init__(self, io_loop=None):
+        """
+            Constructor
+
+            :param io_loop:
+                Optional IOLoop instance
+        """
         self._io_loop = io_loop or IOLoop.instance()
-        self._on_disconnect_callback = on_disconnect
 
         self._stream = None
 
@@ -28,6 +36,16 @@ class Client(RedisCommandsMixin):
         self._sub_callback = False
 
     def connect(self, host='localhost', port=6379, callback=None):
+        """
+            Connect to redis server
+
+            :param host:
+                Host to connect to
+            :param port:
+                Port
+            :param callback:
+                Optional callback to be triggered upon connection
+        """
         self._reset()
 
         # TODO: Configurable sock family
@@ -36,13 +54,34 @@ class Client(RedisCommandsMixin):
         self._stream.read_until_close(self._on_close, self._on_read)
         self._stream.connect((host, port), callback=callback)
 
+    def on_disconnect(self):
+        """
+            Override this method if you want to handle disconnections
+        """
+        pass
+
+    # State
     def is_idle(self):
+        """
+            Check if client is not waiting for any responses
+        """
         return len(self.callbacks) == 0
 
     def is_connected(self):
+        """
+            Check if client is still connected
+        """
         return bool(self._stream) and not self._stream.closed()
 
     def send_message(self, args, callback=None):
+        """
+            Send command to redis
+
+            :param args:
+                Arguments to send
+            :param callback:
+                Callback
+        """
         # Special case for pub-sub
         cmd = args[0]
 
@@ -57,6 +96,12 @@ class Client(RedisCommandsMixin):
         self.callbacks.append(callback)
 
     def format_message(self, args):
+        """
+            Create redis message
+
+            :param args:
+                Message data
+        """
         l = "*%d" % len(args)
         lines = [l.encode('utf-8')]
         for arg in args:
@@ -70,15 +115,34 @@ class Client(RedisCommandsMixin):
         return b"\r\n".join(lines)
 
     def close(self):
+        """
+            Close redis connection
+        """
         self.quit()
         self._stream.close()
 
     # Pub/sub commands
     def psubscribe(self, patterns, callback=None):
+        """
+            Customized psubscribe command - will keep one callback for all incoming messages
+
+            :param patterns:
+                string or list of strings
+            :param callback:
+                callback
+        """
         self._set_sub_callback(callback)
         super(Client, self).psubscribe(patterns, callback)
 
     def subscribe(self, channels, callback=None):
+        """
+            Customized subscribe command - will keep one callback for all incoming messages
+
+            :param channels:
+                string or list of strings
+            :param callback:
+                Callback
+        """
         self._set_sub_callback(callback)
         super(Client, self).subscribe(channels, callback)
 
@@ -129,8 +193,7 @@ class Client(RedisCommandsMixin):
                     logger.exception('Exception in callback')
 
         # Trigger on_disconnect
-        if self._on_disconnect_callback is not None:
-            self._on_disconnect_callback(self)
+        self.on_disconnect()
 
     def _reset(self):
         self.reader = hiredis.Reader()
