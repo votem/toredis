@@ -10,11 +10,10 @@ Key design points:
 1. While toredis attempts to add some syntactical sugar to the API, all responses are returned "as is". For example, if command returns
    list of items and developer requested only one key, list with one entry will be returned. For example::
 
+    def handle(self, result):
+        print len(result)
 
-  def handle(self, result):
-    print len(result)
-
-  conn.hkeys('test1', handle)
+    conn.hkeys('test1', handle)
 
 
 2. Most redis commands accept one or more keys. Toredis adds a bit of logic to handle single key or array of keys. Due to python
@@ -23,14 +22,14 @@ Key design points:
   So, this will work:
 
 
-  conn.blpop('test', callback=callback)
-  conn.blpop(['test', 'test2'], callback=callback)
+    conn.blpop('test', callback=callback)
+    conn.blpop(['test', 'test2'], callback=callback)
 
 
   And this won't:
 
 
-  conn.blpop('test', 'test2', callback=callback)
+    conn.blpop('test', 'test2', callback=callback)
 
 
 3. If redis connection will be dropped while waiting for response, callback will be triggered with `None` as a value.
