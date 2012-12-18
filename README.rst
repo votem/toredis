@@ -16,17 +16,22 @@ Key design points:
 
   conn.hkeys('test1', handle)
 
+
 2. Most redis commands accept one or more keys. Toredis adds a bit of logic to handle single key or array of keys. Due to python
    limitations, it is not possible to use `args` with named argument.
 
   So, this will work:
 
+
   conn.blpop('test', callback=callback)
   conn.blpop(['test', 'test2'], callback=callback)
 
+
   And this won't:
 
+
   conn.blpop('test', 'test2', callback=callback)
+
 
 3. If redis connection will be dropped while waiting for response, callback will be triggered with `None` as a value.
 
