@@ -17,18 +17,19 @@ Key design points:
 
 
 2. Most redis commands accept one or more keys. Toredis adds a bit of logic to handle single key or array of keys. Due to python
-   limitations, it is not possible to use `args` with named argument.
-   So, this will work::
+   limitations, it is not possible to use `args` with named argument::
 
+    # This will work
     conn.blpop('test', callback=callback)
     conn.blpop(['test', 'test2'], callback=callback)
 
-   And this won't::
-
+    # This won't work
     conn.blpop('test', 'test2', callback=callback)
 
 
 3. If redis connection will be dropped while waiting for response, callback will be triggered with `None` as a value.
+
+4. Toredis does not provide reconnection feature, but you can
 
 You can find command `documentation here <https://github.com/mrjoes/toredis/blob/master/toredis/commands.py>`_ (will be moved to rtd later).
 
