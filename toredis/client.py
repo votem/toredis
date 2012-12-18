@@ -46,13 +46,15 @@ class Client(RedisCommandsMixin):
             :param callback:
                 Optional callback to be triggered upon connection
         """
-        self._reset()
-
-        # TODO: Configurable sock family
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
-        self._stream = IOStream(sock, io_loop=self._io_loop)
-        self._stream.read_until_close(self._on_close, self._on_read)
-        self._stream.connect((host, port), callback=callback)
+        return self._connect(sock, (host, port), callback)
+
+    def connect_usocket(self, usock, callback=None):
+        """
+            Connect to redis server with unix socket
+        """
+        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM, 0)
+        return self._connect(sock, usock, callback)
 
     def on_disconnect(self):
         """
@@ -151,6 +153,14 @@ class Client(RedisCommandsMixin):
             self._sub_callback = callback
 
         assert self._sub_callback == callback
+
+    # Helpers
+    def _connect(self, sock, addr, callback):
+        self._reset()
+
+        self._stream = IOStream(sock, io_loop=self._io_loop)
+        self._stream.read_until_close(self._on_close, self._on_read)
+        self._stream.connect(addr, callback=callback)
 
     # Event handlers
     def _on_read(self, data):

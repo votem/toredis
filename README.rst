@@ -35,3 +35,4 @@ You can find command `documentation here <https://github.com/mrjoes/toredis/blob
 
 Things missing:
 * Backport pure-python redis protocol parser (for PyPy support)
+* Connection pools
