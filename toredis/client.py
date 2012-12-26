@@ -134,7 +134,7 @@ class Client(RedisCommandsMixin):
                 callback
         """
         self._set_sub_callback(callback)
-        super(Client, self).psubscribe(patterns, callback)
+        super(Client, self).psubscribe(patterns)
 
     def subscribe(self, channels, callback=None):
         """
@@ -146,7 +146,7 @@ class Client(RedisCommandsMixin):
                 Callback
         """
         self._set_sub_callback(callback)
-        super(Client, self).subscribe(channels, callback)
+        super(Client, self).subscribe(channels)
 
     def _set_sub_callback(self, callback):
         if self._sub_callback is None:
@@ -197,10 +197,11 @@ class Client(RedisCommandsMixin):
 
         if callbacks:
             for cb in callbacks:
-                try:
-                    cb(None)
-                except:
-                    logger.exception('Exception in callback')
+                if cb is not None:
+                    try:
+                        cb(None)
+                    except:
+                        logger.exception('Exception in callback')
 
         if self._sub_callback is not None:
             try:
