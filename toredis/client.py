@@ -202,6 +202,13 @@ class Client(RedisCommandsMixin):
                 except:
                     logger.exception('Exception in callback')
 
+        if self._sub_callback:
+            try:
+                self._sub_callback(None)
+            except:
+                logger.exception('Exception in SUB callback')
+            self._sub_callback = None
+
         # Trigger on_disconnect
         self.on_disconnect()
 
