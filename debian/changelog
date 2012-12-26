@@ -1,3 +1,9 @@
+python-toredis (0.0.6) unstable; urgency=low
+
+  * New build.
+
+ -- Serge S. Koval <serge.koval+github@gmail.com>  Wed, 26 Dec 2012 14:11:55 +0200
+
 python-toredis (0.0.5) unstable; urgency=low
 
   * New build.

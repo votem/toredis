@@ -202,7 +202,7 @@ class Client(RedisCommandsMixin):
                 except:
                     logger.exception('Exception in callback')
 
-        if self._sub_callback:
+        if self._sub_callback is not None:
             try:
                 self._sub_callback(None)
             except:
