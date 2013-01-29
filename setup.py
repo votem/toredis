@@ -29,5 +29,6 @@ setup(
     url="http://github.com/mrjoes/toredis/",
     license="http://www.apache.org/licenses/LICENSE-2.0",
     packages=['toredis'],
+    test_suite='tests.all_tests',
     install_requires=['tornado', 'hiredis'],
 )
