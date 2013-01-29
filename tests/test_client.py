@@ -1,8 +1,7 @@
 from tornado.testing import AsyncTestCase
-import redis
 import time
 from toredis.client import Client
-
+from tornado import gen
 
 class TestClient(AsyncTestCase):
     """ Test the client """
@@ -19,6 +18,7 @@ class TestClient(AsyncTestCase):
         # blocks
         self.assertTrue("connected" in result)
 
+    @gen.engine
     def test_set_command(self):
         client = Client(io_loop=self.io_loop)
         result = {}
@@ -33,47 +33,52 @@ class TestClient(AsyncTestCase):
         #blocks
         self.assertTrue("set" in result)
         self.assertEqual(result["set"], "OK")
-        conn = redis.Redis()
-        self.assertEqual(conn["foo"].decode('utf-8'), "bar")
 
+        conn = Client()
+        conn.connect()
+        value = yield gen.Task(conn.get, "foo")
+        self.assertEqual("bar", value)
+
+    @gen.engine
     def test_get_command(self):
         client = Client(io_loop=self.io_loop)
-        result = {}
+        result = None
 
         def get_callback(response):
-            result["get"] = response
+            result = response
             self.stop()
         time_string = "%s" % time.time()
-        conn = redis.Redis()
-        conn["foo"] = time_string
+        conn = Client()
+        conn.connect()
+        yield gen.Task(conn.set, "foo", time_string)
+
         client.connect()
         client.get("foo", callback=get_callback)
         self.wait()
         #blocks
-        self.assertTrue("get" in result)
-        self.assertEqual(result["get"], time_string)
+
+        self.assertTrue(result is not None, 'result is %s' % result)
+        self.assertEqual(time_string, result)
 
     def test_sub_command(self):
         client = Client(io_loop=self.io_loop)
         result = {"message_count": 0}
-        conn = redis.Redis()
-
-        def sub_callback(response):
-            if response[0] == "subscribe":
-                result["sub"] = response
-                conn.publish("foobar", "new message!")
-            elif response[0] == "message":
-                result["message_count"] += 1
-                if result["message_count"] < 100:
-                    count = result["message_count"]
-                    return conn.publish("foobar", "new message %s!" % count)
-                result["message"] = response[2]
-                self.stop()
+        conn = Client()
+        conn.connect()
 
         client.connect()
-        client.subscribe("foobar", callback=sub_callback)
-        self.wait()
-        # blocks
+        response = yield gen.Task(client.subscribe, "foobar")
+        if response[0] == "subscribe":
+            result["sub"] = response
+            yield gen.Task(conn.publish, "foobar", "new message!")
+        elif response[0] == "message":
+            result["message_count"] += 1
+            if result["message_count"] < 100:
+                count = result["message_count"]
+                value = yield gen.Task(conn.publish,
+                                       "foobar", "new message %s!" % count)
+            result["message"] = response[2]
+
         self.assertTrue("sub" in result)
         self.assertTrue("message" in result)
         self.assertTrue(result["message"], "new message 99!")
