@@ -3,7 +3,6 @@ from tornado.web import RequestHandler, Application, asynchronous
 from tornado.ioloop import IOLoop
 
 from toredis import Client
-import redis
 import time
 
 
@@ -33,7 +32,9 @@ class TestRedis(AsyncHTTPTestCase):
     def test_subscribe(self):
         """ Tests a subscription message """
 
-        conn = redis.Redis()
+        # conn = redis.Redis()
+        conn = Client()
+        conn.connect()
 
         def publish_message():
             conn.publish("foo", "bar")

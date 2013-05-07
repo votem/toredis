@@ -22,12 +22,13 @@ except ImportError:
 
 setup(
     name='toredis',
-    version='0.1.1',
+    version='0.1.2',
     description='Really simple async Redis client for Tornado',
     author='Josh Marshall',
     author_email='catchjosh@gmail.com',
     url="http://github.com/mrjoes/toredis/",
     license="http://www.apache.org/licenses/LICENSE-2.0",
     packages=['toredis'],
+    test_suite='tests.all_tests',
     install_requires=['tornado', 'hiredis'],
 )
