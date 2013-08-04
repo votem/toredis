@@ -130,7 +130,7 @@ def parse_arguments(command, arguments):
             elif len(arg['name']) == 1:
                 name = '%ss' % argname(arg['name'][0])
                 args.append(name)
-                code.append('if isinstance(%s, basestring):' % name)
+                code.append('if isinstance(%s, string_types):' % name)
                 code.append('    args.append(%s)' % name)
                 code.append('else:')
                 code.append('    args.extend(%s)' % name)
@@ -151,7 +151,7 @@ def parse_arguments(command, arguments):
                 args.append('%s=[]' % name)
             else:
                 args.append(name)
-            code.append('if isinstance(%s, basestring):' % name)
+            code.append('if isinstance(%s, string_types):' % name)
             code.append('    args.append(%s)' % name)
             code.append('else:')
             code.append('    args.extend(%s)' % name)
@@ -237,6 +237,11 @@ def get_class_source(class_name):
     return '\n'.join(lines)
 
 
+def get_imports():
+    imports = 'from toredis._compat import string_types'
+    return imports + '\n' * 3
+
+
 def compile_commands():
     ret = {}
     for cmd, params in sorted(get_commands().items()):
@@ -244,12 +249,13 @@ def compile_commands():
         lines = get_command_code(name, cmd, params)
         code = compile('\n'.join(lines), "<string>", "exec")
         ctx = {}
-        exec code in ctx
+        exec(code in ctx)
         ret[name] = ctx[name]
     return ret
 
 
 if __name__ == "__main__":
     with open(os.path.join(os.path.dirname(__file__), 'toredis/commands.py'), 'w') as f:
+        f.write(get_imports())
         f.write(get_class_source('RedisCommandsMixin'))
-        print 'Generated commands.py'
+        print('Generated commands.py')

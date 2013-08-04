@@ -9,7 +9,7 @@ def test_auth():
 
 
 def after_auth(status):
-    print 'Authentication status:', status
+    print('Authentication status:', status)
     assert status == 'OK'
     io_loop.stop()
 
