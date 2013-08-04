@@ -11,7 +11,7 @@ Key design points:
    list of items and developer requested only one key, list with one entry will be returned. For example::
 
     def handle(self, result):
-        print len(result)
+        print(len(result))
 
     conn.hkeys('test1', handle)
 

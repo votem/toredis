@@ -14,7 +14,7 @@ def test():
     status = yield gen.Task(redis.select, '0')
     assert status == 'OK'
 
-    print 'Success'
+    print('Success')
 
     io_loop.stop()
 
