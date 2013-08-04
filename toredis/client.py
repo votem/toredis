@@ -10,6 +10,7 @@ from tornado.ioloop import IOLoop
 from tornado import stack_context
 
 from toredis.commands import RedisCommandsMixin
+from toredis import string_types
 
 
 logger = logging.getLogger(__name__)
@@ -107,7 +108,7 @@ class Client(RedisCommandsMixin):
         l = "*%d" % len(args)
         lines = [l.encode('utf-8')]
         for arg in args:
-            if not isinstance(arg, basestring):
+            if not isinstance(arg, string_types):
                 arg = str(arg)
             arg = arg.encode('utf-8')
             l = "$%d" % len(arg)
