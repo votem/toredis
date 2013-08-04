@@ -1,4 +1,4 @@
-from toredis import string_types
+from toredis._compat import string_types
 
 
 class RedisCommandsMixin(object):

@@ -10,7 +10,7 @@ from tornado.ioloop import IOLoop
 from tornado import stack_context
 
 from toredis.commands import RedisCommandsMixin
-from toredis import string_types
+from toredis._compat import string_types
 
 
 logger = logging.getLogger(__name__)
