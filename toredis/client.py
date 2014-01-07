@@ -10,6 +10,7 @@ from tornado.ioloop import IOLoop
 from tornado import stack_context
 
 from toredis.commands import RedisCommandsMixin
+from toredis.pipeline import Pipeline
 from toredis._compat import string_types, text_type
 
 
@@ -35,6 +36,8 @@ class Client(RedisCommandsMixin):
         self.callbacks = deque()
 
         self._sub_callback = False
+
+        self._pipeline = None
 
     def connect(self, host='localhost', port=6379, callback=None):
         """
@@ -96,7 +99,17 @@ class Client(RedisCommandsMixin):
         self._stream.write(self.format_message(args))
         if callback is not None:
             callback = stack_context.wrap(callback)
-        self.callbacks.append(callback)
+        self.callbacks.append((callback, None))
+
+    def send_messages(self, messages, callback=None):
+
+        if self._sub_callback is not None:
+            raise ValueError('Cannot run pipeline over PUBSUB connection')
+
+        self._stream.write(b"".join(messages))
+        if callback is not None:
+            callback = stack_context.wrap(callback)
+        self.callbacks.append((callback, len(messages)))
 
     def format_message(self, args):
         """
@@ -178,7 +191,14 @@ class Client(RedisCommandsMixin):
                     logger.exception('SUB callback failed')
             else:
                 if self.callbacks:
-                    callback = self.callbacks.popleft()
+                    callback, num_resp = self.callbacks.popleft()
+                    if num_resp is not None:
+                        pipeline_resp = [resp]
+                        while num_resp > 1:
+                            resp = self.reader.gets()
+                            pipeline_resp.append(resp)
+                            num_resp -= 1
+                        resp = pipeline_resp
                     if callback is not None:
                         try:
                             callback(resp)
@@ -218,3 +238,8 @@ class Client(RedisCommandsMixin):
     def _reset(self):
         self.reader = hiredis.Reader()
         self._sub_callback = None
+
+    def pipeline(self):
+        if not self._pipeline:
+             self._pipeline = Pipeline(self)
+        return self._pipeline
