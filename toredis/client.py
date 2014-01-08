@@ -99,7 +99,7 @@ class Client(RedisCommandsMixin):
         self._stream.write(self.format_message(args))
         if callback is not None:
             callback = stack_context.wrap(callback)
-        self.callbacks.append((callback, None))
+        self.callbacks.append((callback, None, None))
 
     def send_messages(self, messages, callback=None):
 
@@ -109,7 +109,7 @@ class Client(RedisCommandsMixin):
         self._stream.write(b"".join(messages))
         if callback is not None:
             callback = stack_context.wrap(callback)
-        self.callbacks.append((callback, len(messages)))
+        self.callbacks.append((callback, len(messages), []))
 
     def format_message(self, args):
         """
@@ -191,11 +191,15 @@ class Client(RedisCommandsMixin):
                     logger.exception('SUB callback failed')
             else:
                 if self.callbacks:
-                    callback, num_resp = self.callbacks.popleft()
+                    callback, num_resp, pipeline_resp = self.callbacks.popleft()
                     if num_resp is not None:
-                        pipeline_resp = [resp]
-                        while num_resp > 1:
+                        pipeline_resp.append(resp)
+                        num_resp -= 1
+                        while num_resp > 0:
                             resp = self.reader.gets()
+                            if resp is False:
+                                self.callbacks.appendleft((callback, num_resp, pipeline_resp))
+                                return
                             pipeline_resp.append(resp)
                             num_resp -= 1
                         resp = pipeline_resp
