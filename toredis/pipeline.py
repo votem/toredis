@@ -38,3 +38,6 @@ class Pipeline(RedisCommandsMixin):
         messages = self._messages
         self._messages = []
         self._client.send_messages(messages, callback)
+
+    def reset(self):
+        self._messages = []
