@@ -224,9 +224,10 @@ class Client(RedisCommandsMixin):
 
         if callbacks:
             for cb in callbacks:
-                if cb is not None:
+                callback, callback_data = cb
+                if callback is not None:
                     try:
-                        cb(None)
+                        callback(None)
                     except:
                         logger.exception('Exception in callback')
 
