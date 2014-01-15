@@ -205,6 +205,7 @@ class Client(RedisCommandsMixin):
                     if callback_data is None:
                         callback_resp = resp
                     else:
+                        # handle pipeline responses
                         num_resp, callback_resp = callback_data
                         callback_resp.append(resp)
                         while len(callback_resp) < num_resp:
