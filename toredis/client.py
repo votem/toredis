@@ -101,11 +101,21 @@ class Client(RedisCommandsMixin):
             callback = stack_context.wrap(callback)
         self.callbacks.append((callback, None))
 
-    def send_messages(self, messages, callback=None):
+    def send_messages(self, args_pipeline, callback=None):
+        """
+            Send command pipeline to redis
+
+            :param args_pipeline:
+                Arguments pipeline to send
+            :param callback:
+                Callback
+        """
 
         if self._sub_callback is not None:
             raise ValueError('Cannot run pipeline over PUBSUB connection')
 
+        # Send command pipeline
+        messages = [self.format_message(args) for args in args_pipeline]
         self._stream.write(b"".join(messages))
         if callback is not None:
             callback = stack_context.wrap(callback)

@@ -33,6 +33,17 @@ Key design points:
 
 You can find command `documentation here <https://github.com/mrjoes/toredis/blob/master/toredis/commands.py>`_ (will be moved to rtd later).
 
+Pipelining is also supported::
+
+    # For more than one pipeline for connection create it with Pipeline(conn)
+    pipeline = conn.pipeline()
+    pipeline.set('foo', 'bar')
+    pipeline.get('foo')
+    pipeline.send(callback=callback)
+
+For more examples please refer to tests.
+More on `redis pipelining <http://redis.io/topics/pipelining>`_.
+
 Things missing:
 
 * Backport pure-python redis protocol parser (for PyPy support)

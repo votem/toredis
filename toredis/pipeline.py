@@ -14,7 +14,7 @@ class Pipeline(RedisCommandsMixin):
         """
 
         self._client = client
-        self._messages = []
+        self._args_pipeline = []
 
     def send_message(self, args, callback=None):
         """
@@ -25,8 +25,7 @@ class Pipeline(RedisCommandsMixin):
             :param callback:
                 Callback
         """
-        message = self._client.format_message(args)
-        self._messages.append(message)
+        self._args_pipeline.append(args)
 
     def send(self, callback=None):
         """
@@ -35,9 +34,12 @@ class Pipeline(RedisCommandsMixin):
             :param callback:
                 Callback
         """
-        messages = self._messages
-        self._messages = []
-        self._client.send_messages(messages, callback)
+        args_pipeline = self._args_pipeline
+        self._args_pipeline = []
+        self._client.send_messages(args_pipeline, callback)
 
     def reset(self):
-        self._messages = []
+        """
+            Reset command pipeline
+        """
+        self._args_pipeline = []
