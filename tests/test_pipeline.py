@@ -29,7 +29,9 @@ class TestPipeline(AsyncTestCase):
         pipeline.mget(['foo2', 'foo3'])
         pipeline.send(callback=self.stop)
         response = self.wait()
-        self.assertEqual(response, ['OK', 'OK', 'OK', 'bar1', ['bar2', 'bar3']])
+        self.assertEqual(
+            response, [b'OK', b'OK', b'OK', b'bar1', [b'bar2', b'bar3']]
+        )
 
     def test_pipeline_reset(self):
         pipeline = self.client.pipeline()
@@ -40,7 +42,7 @@ class TestPipeline(AsyncTestCase):
         pipeline.get('foo2')
         pipeline.send(callback=self.stop)
         response = self.wait()
-        self.assertEqual(response, ['OK', 'bar2'])
+        self.assertEqual(response, [b'OK', b'bar2'])
 
     def test_pipeline_with_error(self):
         pipeline = self.client.pipeline()
@@ -52,14 +54,14 @@ class TestPipeline(AsyncTestCase):
         pipeline.send(callback=self.stop)
         response = self.wait()
         self.assertIsInstance(response[0], ReplyError)
-        self.assertEqual(response[1], ['key1', 'key2', 'arg1', 'arg2'])
+        self.assertEqual(response[1], [b'key1', b'key2', b'arg1', b'arg2'])
 
     def test_pipeline_small(self):
         pipeline = self.client.pipeline()
         pipeline.set('foo', 'bar')
         pipeline.send(callback=self.stop)
         response = self.wait()
-        self.assertEqual(response, ['OK'])
+        self.assertEqual(response, [b'OK'])
 
     def test_pipeline_big(self):
         pipeline = self.client.pipeline()
@@ -67,7 +69,7 @@ class TestPipeline(AsyncTestCase):
         for i in range(10000):
             pipeline.set('foo%d' % i, 'bar%d' % i)
             pipeline.get('foo%d' % i)
-            expected.extend(['OK', 'bar%d' % i])
+            expected.extend([b'OK', b'bar' + str(i).encode()])
         pipeline.send(callback=self.stop)
         response = self.wait()
         self.assertEqual(response, expected)
@@ -78,7 +80,7 @@ class TestPipeline(AsyncTestCase):
         pipeline.get('foo1')
         pipeline.send(callback=self.stop)
         response = self.wait()
-        self.assertEqual(response, ['OK', 'bar1'])
+        self.assertEqual(response, [b'OK', b'bar1'])
 
         self.client.eval(
             'return {KEYS[1],KEYS[2],ARGV[1],ARGV[2]}',
@@ -86,13 +88,13 @@ class TestPipeline(AsyncTestCase):
             callback=self.stop
         )
         response = self.wait()
-        self.assertEqual(response, ['key1', 'key2', 'arg1', 'arg2'])
+        self.assertEqual(response, [b'key1', b'key2', b'arg1', b'arg2'])
 
         pipeline.set('foo2', 'bar2')
         pipeline.get('foo2')
         pipeline.send(callback=self.stop)
         response = self.wait()
-        self.assertEqual(response, ['OK', 'bar2'])
+        self.assertEqual(response, [b'OK', b'bar2'])
 
     def test_parallel_pipeline_and_commands(self):
         result = {}
@@ -126,9 +128,9 @@ class TestPipeline(AsyncTestCase):
 
         self.wait(lambda: len(result) == 3)
         self.assertEqual(result, {
-            'pipeline1': ['OK', 'bar1'],
-            'eval': ['key1', 'key2', 'arg1', 'arg2'],
-            'pipeline2': ['OK', 'bar2']
+            'pipeline1': [b'OK', b'bar1'],
+            'eval': [b'key1', b'key2', b'arg1', b'arg2'],
+            'pipeline2': [b'OK', b'bar2']
         })
 
     def test_parallel_pipelines(self):
@@ -154,6 +156,6 @@ class TestPipeline(AsyncTestCase):
 
         self.wait(lambda: len(result) == 2)
         self.assertEqual(result, {
-            'pipeline1': ['OK', 'bar1'],
-            'pipeline2': ['OK', 'bar2']
+            'pipeline1': [b'OK', b'bar1'],
+            'pipeline2': [b'OK', b'bar2']
         })
