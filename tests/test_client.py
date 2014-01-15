@@ -32,7 +32,7 @@ class TestClient(AsyncTestCase):
         self.wait()
         #blocks
         self.assertTrue("set" in result)
-        self.assertEqual(result["set"], "OK")
+        self.assertEqual(result["set"], b"OK")
 
         conn = Client()
         conn.connect()
@@ -113,7 +113,7 @@ class TestClient(AsyncTestCase):
         client.connect()
         client.rpush("test", "dummy", rpush_callback)
         self.wait()
-        self.assertEqual(result["pop"], ["test", "dummy"])
+        self.assertEqual(result["pop"], [b"test", b"dummy"])
 
     def test_disconnect(self):
         client = Client(io_loop=self.io_loop)

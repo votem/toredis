@@ -19,11 +19,13 @@ def get_commands():
 def argname(name):
     return name.lower().replace('-', '_').replace(':', '_')
 
+def parse_command(command):
+    return '"%s"' % command.replace(' ', '", "')
 
 def parse_arguments(command, arguments):
     args = ['self']
     doc = []
-    code = ['args = ["%s"]' % command]
+    code = ['{args} = [%s]' % parse_command(command)]
 
     for arg in arguments:
         # Sub-command parsing
@@ -45,28 +47,28 @@ def parse_arguments(command, arguments):
                     ))
 
                     code.append(
-                        '    args.append("%s")' % arg['command']
+                        '    {args}.append("%s")' % arg['command']
                     )
 
                     for i in arg['name']:
-                        code.append('    args.append(%s)' % argname(i))
+                        code.append('    {args}.append(%s)' % argname(i))
                 else:
                     code.append('for %s in %s:' % (argname(arg['name']), cmd))
-                    code.append('    args.append("%s")' % arg['command'])
-                    code.append('    args.append(%s)' % argname(arg['name']))
+                    code.append('    {args}.append("%s")' % arg['command'])
+                    code.append('    {args}.append(%s)' % argname(arg['name']))
             elif arg.get('variadic'):
                 cmd_default = 'tuple()'
                 code.append('if len(%s):' % cmd)
-                code.append('    args.append("%s")' % arg['command'])
+                code.append('    {args}.append("%s")' % arg['command'])
                 if isinstance(arg['name'], list):
                     code.append('    for %s in %s:' % (
                         ', '.join([argname(i) for i in arg['name']]),
                         cmd
                     ))
                     for i in arg['name']:
-                        code.append('        args.append(%s)' % argname(i))
+                        code.append('        {args}.append(%s)' % argname(i))
                 else:
-                    code.append('    args.extend(%s)' % cmd)
+                    code.append('    {args}.extend(%s)' % cmd)
             else:
                 if arg.get('optional'):
                     prefix = '    '
@@ -74,7 +76,7 @@ def parse_arguments(command, arguments):
                 else:
                     prefix = ''
 
-                code.append(prefix + 'args.append("%s")' % arg['command'])
+                code.append(prefix + '{args}.append("%s")' % arg['command'])
 
                 if isinstance(arg['name'], list):
                     code.append(prefix + '%s = %s' % (
@@ -82,9 +84,9 @@ def parse_arguments(command, arguments):
                         cmd
                     ))
                     for i in arg['name']:
-                        code.append(prefix + 'args.append(%s)' % argname(i))
+                        code.append(prefix + '{args}.append(%s)' % argname(i))
                 else:
-                    code.append(prefix + 'args.append(%s)' % cmd)
+                    code.append(prefix + '{args}.append(%s)' % cmd)
 
             if 'optional' in arg:
                 args.append('%s=%s' % (cmd, cmd_default))
@@ -100,7 +102,7 @@ def parse_arguments(command, arguments):
                 "type": "key",
                 "multiple": True
             }
-            code.append('args.append(len(keys))')
+            code.append('{args}.append(len(keys))')
         # If name is list
         elif isinstance(arg['name'], list):
             # makes no sense for single pairs
@@ -110,8 +112,8 @@ def parse_arguments(command, arguments):
             if arg['name'] == [u"score", u"member"]:
                 args.append('member_score_dict')
                 code.append('for member, score in member_score_dict.items():')
-                code.append('    args.append(score)')
-                code.append('    args.append(member)')
+                code.append('    {args}.append(score)')
+                code.append('    {args}.append(member)')
 
                 doc.append(':param member_score_dict:')
                 doc.append('    member score dictionary')
@@ -121,8 +123,8 @@ def parse_arguments(command, arguments):
                 name = '%s_dict' % arg_name
                 args.append(name)
                 code.append('for %s, value in %s.items():' % (arg_name, name))
-                code.append('    args.append(%s)' % arg_name)
-                code.append('    args.append(value)')
+                code.append('    {args}.append(%s)' % arg_name)
+                code.append('    {args}.append(value)')
 
                 doc.append(':param member_score_dict:')
                 doc.append('    key value dictionary')
@@ -131,9 +133,9 @@ def parse_arguments(command, arguments):
                 name = '%ss' % argname(arg['name'][0])
                 args.append(name)
                 code.append('if isinstance(%s, string_types):' % name)
-                code.append('    args.append(%s)' % name)
+                code.append('    {args}.append(%s)' % name)
                 code.append('else:')
-                code.append('    args.extend(%s)' % name)
+                code.append('    {args}.extend(%s)' % name)
 
                 doc.append(':param member_score_dict:')
                 doc.append('    string or list of strings')
@@ -152,9 +154,9 @@ def parse_arguments(command, arguments):
             else:
                 args.append(name)
             code.append('if isinstance(%s, string_types):' % name)
-            code.append('    args.append(%s)' % name)
+            code.append('    {args}.append(%s)' % name)
             code.append('else:')
-            code.append('    args.extend(%s)' % name)
+            code.append('    {args}.extend(%s)' % name)
 
             doc.append(':param %s:' % name)
             doc.append('    string or list of strings')
@@ -162,12 +164,12 @@ def parse_arguments(command, arguments):
             name = argname(arg['name'])
             args.append('%s=False' % name)
             code.append('if %s:' % name)
-            code.append('    args.append("%s")' % arg['enum'][0])
+            code.append('    {args}.append("%s")' % arg['enum'][0])
 
             doc.append(':param %s:' % name)
         else:
             name = argname(arg['name'])
-            code.append('args.append(%s)' % name)
+            code.append('{args}.append(%s)' % name)
             if arg.get('optional') == True:
                 args.append('%s=None' % name)
             else:
@@ -176,9 +178,15 @@ def parse_arguments(command, arguments):
 
     args.append('callback=None')
     if len(code) > 1:
-        code.append('self.send_message(args, callback)')
+        code.append('self.send_message({args}, callback)')
     else:
-        code = ['self.send_message(["%s"], callback)' % command]
+        code = ['self.send_message([%s], callback)' % parse_command(command)]
+
+    if 'args' in args or any(arg.startswith('args=') for arg in args):
+        code = [line.format(args='message_args') for line in code]
+    else:
+        code = [line.format(args='args') for line in code]
+
     return args, doc, code
 
 

@@ -155,7 +155,7 @@ class RedisCommandsMixin(object):
         ----------
         O(N) where N is the number of client connections
         """
-        args = ["CLIENT KILL"]
+        args = ["CLIENT", "KILL"]
         args.append(ip_port)
         self.send_message(args, callback)
 
@@ -167,7 +167,7 @@ class RedisCommandsMixin(object):
         ----------
         O(N) where N is the number of client connections
         """
-        self.send_message(["CLIENT LIST"], callback)
+        self.send_message(["CLIENT", "LIST"], callback)
 
     def config_get(self, parameter, callback=None):
         """
@@ -175,7 +175,7 @@ class RedisCommandsMixin(object):
 
             :param parameter:
         """
-        args = ["CONFIG GET"]
+        args = ["CONFIG", "GET"]
         args.append(parameter)
         self.send_message(args, callback)
 
@@ -187,7 +187,7 @@ class RedisCommandsMixin(object):
         ----------
         O(1)
         """
-        self.send_message(["CONFIG RESETSTAT"], callback)
+        self.send_message(["CONFIG", "RESETSTAT"], callback)
 
     def config_set(self, parameter, value, callback=None):
         """
@@ -196,7 +196,7 @@ class RedisCommandsMixin(object):
             :param parameter:
             :param value:
         """
-        args = ["CONFIG SET"]
+        args = ["CONFIG", "SET"]
         args.append(parameter)
         args.append(value)
         self.send_message(args, callback)
@@ -213,7 +213,7 @@ class RedisCommandsMixin(object):
 
             :param key:
         """
-        args = ["DEBUG OBJECT"]
+        args = ["DEBUG", "OBJECT"]
         args.append(key)
         self.send_message(args, callback)
 
@@ -221,7 +221,7 @@ class RedisCommandsMixin(object):
         """
         Make the server crash
         """
-        self.send_message(["DEBUG SEGFAULT"], callback)
+        self.send_message(["DEBUG", "SEGFAULT"], callback)
 
     def decr(self, key, callback=None):
         """
@@ -322,18 +322,18 @@ class RedisCommandsMixin(object):
         ----------
         Depends on the script that is executed.
         """
-        args = ["EVAL"]
-        args.append(script)
-        args.append(len(keys))
+        message_args = ["EVAL"]
+        message_args.append(script)
+        message_args.append(len(keys))
         if isinstance(keys, string_types):
-            args.append(keys)
+            message_args.append(keys)
         else:
-            args.extend(keys)
+            message_args.extend(keys)
         if isinstance(args, string_types):
-            args.append(args)
+            message_args.append(args)
         else:
-            args.extend(args)
-        self.send_message(args, callback)
+            message_args.extend(args)
+        self.send_message(message_args, callback)
 
     def evalsha(self, sha1, keys, args, callback=None):
         """
@@ -349,18 +349,18 @@ class RedisCommandsMixin(object):
         ----------
         Depends on the script that is executed.
         """
-        args = ["EVALSHA"]
-        args.append(sha1)
-        args.append(len(keys))
+        message_args = ["EVALSHA"]
+        message_args.append(sha1)
+        message_args.append(len(keys))
         if isinstance(keys, string_types):
-            args.append(keys)
+            message_args.append(keys)
         else:
-            args.extend(keys)
+            message_args.extend(keys)
         if isinstance(args, string_types):
-            args.append(args)
+            message_args.append(args)
         else:
-            args.extend(args)
-        self.send_message(args, callback)
+            message_args.extend(args)
+        self.send_message(message_args, callback)
 
     def execute(self, callback=None):
         """
@@ -1424,7 +1424,7 @@ class RedisCommandsMixin(object):
         O(N) with N being the number of scripts to check (so checking a single
         script is an O(1) operation).
         """
-        args = ["SCRIPT EXISTS"]
+        args = ["SCRIPT", "EXISTS"]
         if isinstance(scripts, string_types):
             args.append(scripts)
         else:
@@ -1439,7 +1439,7 @@ class RedisCommandsMixin(object):
         ----------
         O(N) with N being the number of scripts in cache
         """
-        self.send_message(["SCRIPT FLUSH"], callback)
+        self.send_message(["SCRIPT", "FLUSH"], callback)
 
     def script_kill(self, callback=None):
         """
@@ -1449,7 +1449,7 @@ class RedisCommandsMixin(object):
         ----------
         O(1)
         """
-        self.send_message(["SCRIPT KILL"], callback)
+        self.send_message(["SCRIPT", "KILL"], callback)
 
     def script_load(self, script, callback=None):
         """
@@ -1461,7 +1461,7 @@ class RedisCommandsMixin(object):
         ----------
         O(N) with N being the length in bytes of the script body.
         """
-        args = ["SCRIPT LOAD"]
+        args = ["SCRIPT", "LOAD"]
         args.append(script)
         self.send_message(args, callback)
 
