@@ -37,8 +37,6 @@ class Client(RedisCommandsMixin):
 
         self._sub_callback = False
 
-        self._pipeline = None
-
     def connect(self, host='localhost', port=6379, callback=None):
         """
             Connect to redis server
@@ -257,6 +255,4 @@ class Client(RedisCommandsMixin):
         self._sub_callback = None
 
     def pipeline(self):
-        if not self._pipeline:
-             self._pipeline = Pipeline(self)
-        return self._pipeline
+        return Pipeline(self)
