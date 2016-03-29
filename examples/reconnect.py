@@ -67,12 +67,12 @@ class ToRedisClient(Client):
                 host = 'localhost', 
                 port = 6379,
                 password = '',
-                database = '',
+                database = 0,
                 auto_reconnect = True):
         self.host = host
         self.port = port
-        self.password = password,
-        self.database = database,
+        self.password = password
+        self.database = database
         self.auto_reconnect = auto_reconnect
         self.reconnect()
 
@@ -87,11 +87,11 @@ class ToRedisClient(Client):
     @gen.engine
     def auth_first(self):
         # Authenticate first
-        status = yield gen.Task(self.auth, REDIS_CONFIG['password'])
+        status = yield gen.Task(self.auth, self.password)
         print 'status=', status
              
         # Select database
-        status = yield gen.Task(self.select, REDIS_CONFIG['db'])
+        status = yield gen.Task(self.select, self.database)
         assert status == 'OK'
              
         print 'auth_first Success'
