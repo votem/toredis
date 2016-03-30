@@ -60,6 +60,7 @@ class TestClient(AsyncTestCase):
         self.assertTrue(result is not None, 'result is %s' % result)
         self.assertEqual(time_string, result)
 
+    @gen.engine
     def test_sub_command(self):
         client = Client(io_loop=self.io_loop)
         result = {"message_count": 0}
