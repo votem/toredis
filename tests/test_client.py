@@ -122,3 +122,11 @@ class TestClient(AsyncTestCase):
         client.close()
         with self.assertRaises(IOError):
             client._stream.read_bytes(1024, lambda x: x)
+
+    def test_pubsub_disconnect(self):
+        client = Client(io_loop=self.io_loop)
+        client.connect()
+        client.subscribe("foo", lambda: None)
+        client.close()
+        with self.assertRaises(IOError):
+            client._stream.read_bytes(1024, lambda x: x)
