@@ -90,7 +90,7 @@ class Client(RedisCommandsMixin):
         cmd = args[0]
 
         if (self._sub_callback is not None and
-            cmd not in ('PSUBSCRIBE', 'SUBSCRIBE', 'PUNSUBSCRIBE', 'UNSUBSCRIBE')):
+            cmd not in ('PSUBSCRIBE', 'SUBSCRIBE', 'PUNSUBSCRIBE', 'UNSUBSCRIBE', 'QUIT')):
             raise ValueError('Cannot run normal command over PUBSUB connection')
 
         # Send command
