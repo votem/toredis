@@ -182,8 +182,13 @@ class Client(RedisCommandsMixin):
         self._reset()
 
         self._stream = IOStream(sock, io_loop=self._io_loop)
-        self._stream.connect(addr, callback=callback)
-        self._stream.read_until_close(self._on_close, self._on_read)
+
+        def _stream_connect_callback():
+            callback()
+
+            self._stream.read_until_close(self._on_close, self._on_read)
+
+        self._stream.connect(addr, callback=_stream_connect_callback)
 
     # Event handlers
     def _on_read(self, data):
