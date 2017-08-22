@@ -108,6 +108,11 @@ class Client(RedisCommandsMixin):
             :param callback:
                 Callback
         """
+        if not args_pipeline:
+            # Exit immediately if there's no pipeline commands
+            # Otherwise registering callback white sending empty message
+            #   will cause callback mismatch going forward
+            return
 
         if self._sub_callback is not None:
             raise ValueError('Cannot run pipeline over PUBSUB connection')
