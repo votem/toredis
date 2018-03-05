@@ -186,7 +186,7 @@ class Client(RedisCommandsMixin):
     def _connect(self, sock, addr, callback):
         self._reset()
 
-        self._stream = IOStream(sock, io_loop=self._io_loop)
+        self._stream = IOStream(sock)
 
         def _stream_connect_callback():
             callback()
